@@ -6,42 +6,19 @@ license = "Apache-2.0"
 authors = ["Astro <astro@spaceboyz.net>"]
 version = "0.1.2"
 keywords = ["ethernet", "eth", "stm32", "stm32f4"]
-repository = "https://github.com/stm32-rs/stm32-eth"
-documentation = "https://docs.rs/stm32-eth/"
-edition = "2018"
-
-[badges]
-travis-ci = { repository = "astro/stm32-eth", branch = "master" }
-maintenance = { status = "experimental" }
-
-[package.metadata.docs.rs]
-features = [ "smoltcp-phy", "nucleo-f429zi" ]
 
 [dependencies]
-volatile-register = "0.2"
-aligned = "0.3"
-stm32f4xx-hal = "0.5"
+core = { path = "../drone-os/libcore-drone", package = "libcore-drone" }
+drone-core = { path = "../drone-os/drone-core" }
+drone-cortex-m = { path = "../drone-os/drone-cortex-m", features = ["fpu"] }
+drone-stm32-map = { path = "../drone-os/drone-stm32-map", features = ["dma", "exti", "gpio", "i2c", "rtc", "spi", "tim", "uart"] }
+futures = { version = "0.3.1", default-features = false}
 
-smoltcp = { version = "0.6.0", default-features = false, features = ["proto-ipv4", "proto-ipv6", "socket-icmp", "socket-udp", "socket-tcp", "log", "verbose", "ethernet"], optional = true }
-log = { version = "0.4", optional = true }
-
-[features]
-smoltcp-phy = ["smoltcp", "log"]
-default = []
-nucleo-f429zi = ["stm32f4xx-hal/stm32f429"]
-
-[dev-dependencies]
-cortex-m = "0.5"
-cortex-m-rt = "0.6"
-panic-itm = "0.4"
-
-[[example]]
-name = "pktgen"
-
-[[example]]
-name = "ip"
-required-features = ["smoltcp-phy"]
+smoltcp = { path = "../smoltcp", default-features = false, features = [
+    "socket-raw", "socket-udp", "socket-tcp", "proto-ipv4", "ethernet"] }
 
 [profile.release]
-debug = 2
-lto = true
+opt-level = 0
+debug = true
+lto = false
+panic = "abort"
