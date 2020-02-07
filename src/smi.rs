@@ -1,37 +1,44 @@
-use stm32f4xx_hal::stm32::ethernet_mac::{MACMIIAR, MACMIIDR};
+use drone_cortex_m::{reg::prelude::*};
+
+use drone_stm32_map::{
+    reg,
+};
 
 /// Station Management Interface
-pub struct SMI<'a> {
-    macmiiar: &'a MACMIIAR,
-    macmiidr: &'a MACMIIDR,
+pub struct SMI {
+    mac_miiar: reg::ethernet_mac::Macmiiar<Srt>,
+    mac_miidr: reg::ethernet_mac::Macmiidr<Srt>,
 }
 
-impl<'a> SMI<'a> {
+impl SMI {
     /// Allocate
-    pub fn new(macmiiar: &'a MACMIIAR, macmiidr: &'a MACMIIDR) -> Self {
+    pub fn new(
+        mac_miiar: reg::ethernet_mac::Macmiiar<Srt>,
+        mac_miidr: reg::ethernet_mac::Macmiidr<Srt>) -> Self {
+
         SMI {
-            macmiiar,
-            macmiidr,
+            mac_miiar,
+            mac_miidr,
         }
     }
 
     /// Wait for not busy
     fn wait_ready(&self) {
-        while self.macmiiar.read().mb().bit_is_set() {}
+        while self.mac_miiar.read().mb().bit_is_set() {}
     }
 
     fn read_data(&self) -> u16 {
-        self.macmiidr.read().md().bits()
+        self.mac_miidr.read().md().bits()
     }
 
     /// Read an SMI register
     pub fn read(&self, phy: u8, reg: u8) -> u16 {
-        self.macmiiar.modify(|_, w| {
-            w.pa().bits(phy)
-                .mr().bits(reg)
+        self.mac_miiar.modify(|r| {
+            r.write_pa(phy.into())
+                .write_mr(reg.into())
                 /* Read operation MW=0 */
-                .mw().clear_bit()
-                .mb().set_bit()
+                .clear_mw()
+                .set_mb()
         });
         self.wait_ready();
 
@@ -40,20 +47,20 @@ impl<'a> SMI<'a> {
     }
 
     fn write_data(&self, data: u16) {
-        self.macmiidr.write(|w| {
-            w.md().bits(data)
+        self.mac_miidr.write(|r| {
+            r.write_md(data.into())
         });
     }
 
     /// Write an SMI register
     pub fn write(&self, phy: u8, reg: u8, data: u16) {
         self.write_data(data);
-        self.macmiiar.modify(|_, w| {
-            w.pa().bits(phy)
-                .mr().bits(reg)
+        self.mac_miiar.modify(|r| {
+            r.write_pa(phy.into())
+                .write_mr(reg.into())
                 /* Write operation MW=1*/
-                .mw().set_bit()
-                .mb().set_bit()
+                .set_mw()
+                .set_mb()
         });
         self.wait_ready();
     }

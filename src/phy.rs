@@ -48,16 +48,16 @@ use self::consts::*;
 /// # References
 /// * [Datasheet](http://ww1.microchip.com/downloads/en/DeviceDoc/DS_LAN8742_00001989A.pdf)
 /// * [libopencm3 driver](https://github.com/libopencm3/libopencm3/blob/master/lib/ethernet/mac_stm32fxx7.c)
-pub struct Phy<'a> {
-    smi: SMI<'a>,
+pub struct Phy {
+    smi: SMI,
     phy: u8,
 }
 
-impl<'a> Phy<'a> {
+impl Phy {
     /// Allocate
     pub fn new(
-        mac_miiar: &'a reg::ethernet_mac::Macmiiar<Srt>,
-        mac_miidr: &'a reg::ethernet_mac::Macmiidr<Srt>, 
+        mac_miiar: reg::ethernet_mac::Macmiiar<Srt>,
+        mac_miidr: reg::ethernet_mac::Macmiidr<Srt>, 
         phy: u8) -> Self {
 
         let smi = SMI::new(mac_miiar, mac_miidr);
