@@ -1,5 +1,8 @@
-use core::option::Option;
-use stm32f4xx_hal::stm32::ethernet_mac::{MACMIIAR, MACMIIDR};
+use drone_cortex_m::{reg::prelude::*};
+
+use drone_stm32_map::{
+    reg,
+};
 
 use crate::smi::SMI;
 
@@ -52,8 +55,12 @@ pub struct Phy<'a> {
 
 impl<'a> Phy<'a> {
     /// Allocate
-    pub fn new(macmiiar: &'a MACMIIAR, macmiidr: &'a MACMIIDR, phy: u8) -> Self {
-        let smi = SMI::new(macmiiar, macmiidr);
+    pub fn new(
+        mac_miiar: &'a reg::ethernet_mac::Macmiiar<Srt>,
+        mac_miidr: &'a reg::ethernet_mac::Macmiidr<Srt>, 
+        phy: u8) -> Self {
+
+        let smi = SMI::new(mac_miiar, mac_miidr);
 
         Phy {
             smi,
