@@ -1,17 +1,9 @@
 #![no_std]
-
-/// Re-export
-pub use stm32f4xx_hal as hal;
-/// Re-export
-pub use stm32f4xx_hal::stm32;
-use stm32f4xx_hal::stm32::{ETHERNET_MAC, ETHERNET_DMA, NVIC, Interrupt};
-
 pub mod phy;
 use phy::{Phy, PhyStatus};
 mod smi;
 mod ring;
 pub use ring::RingEntry;
-mod desc;
 mod rx;
 use rx::{RxRing, RxRingEntry, RxPacket};
 pub use rx::{RxDescriptor, RxError};
@@ -20,14 +12,15 @@ use tx::{TxRing, TxRingEntry};
 pub use tx::{TxDescriptor, TxError};
 mod setup;
 pub use setup::setup;
-#[cfg(feature = "nucleo-f429zi")]
-pub use setup::setup_pins;
 
-#[cfg(feature = "smoltcp-phy")]
+use drone_cortex_m::{reg::prelude::*};
+
+use drone_stm32_map::{
+    reg,
+};
+
 pub use smoltcp;
-#[cfg(feature = "smoltcp-phy")]
 mod smoltcp_phy;
-#[cfg(feature = "smoltcp-phy")]
 pub use smoltcp_phy::{EthRxToken, EthTxToken};
 
 
@@ -54,8 +47,17 @@ use self::consts::*;
 /// [`Phy`](phy/struct.Phy.html) like they're found on STM Nucleo-144
 /// boards.
 pub struct Eth<'rx, 'tx> {
-    eth_mac: ETHERNET_MAC,
-    eth_dma: ETHERNET_DMA,
+    mac_miiar: reg::ethernet_mac::Macmiiar<Srt>,
+    mac_miidr: reg::ethernet_mac::Macmiidr<Srt>,
+    mac_cr: reg::ethernet_mac::Maccr<Srt>,
+    mac_ffr: reg::ethernet_mac::Macffr<Srt>,
+    mac_fcr: reg::ethernet_mac::Macfcr<Srt>,
+
+    dma_omr: reg::ethernet_dma::Dmaomr<Srt>,
+    dma_bmr: reg::ethernet_dma::Dmabmr<Srt>,
+    dma_ier: reg::ethernet_dma::Dmaier<Srt>,
+    dma_sr: reg::ethernet_dma::Dmasr<Srt>,
+
     rx_ring: RxRing<'rx>,
     tx_ring: TxRing<'tx>,
 }
@@ -74,12 +76,30 @@ impl<'rx, 'tx> Eth<'rx, 'tx> {
     /// so that you can [`send()`](#method.send) and
     /// [`recv_next()`](#method.recv_next).
     pub fn new(
-        eth_mac: ETHERNET_MAC, eth_dma: ETHERNET_DMA,
-        rx_buffer: &'rx mut [RxRingEntry], tx_buffer: &'tx mut [TxRingEntry]
+        mac_miiar: reg::ethernet_mac::Macmiiar<Srt>,
+        mac_miidr: reg::ethernet_mac::Macmiidr<Srt>,
+        mac_cr: reg::ethernet_mac::Maccr<Srt>,
+        mac_ffr: reg::ethernet_mac::Macffr<Srt>,
+        mac_fcr: reg::ethernet_mac::Macfcr<Srt>,
+
+        dma_omr: reg::ethernet_dma::Dmaomr<Srt>,
+        dma_bmr: reg::ethernet_dma::Dmabmr<Srt>,
+        dma_ier: reg::ethernet_dma::Dmaier<Srt>,
+        dma_sr: reg::ethernet_dma::Dmasr<Srt>,
+
+        rx_buffer: &'rx mut [RxRingEntry], 
+        tx_buffer: &'tx mut [TxRingEntry]
     ) -> Self {
         let mut eth = Eth {
-            eth_mac,
-            eth_dma,
+            mac_miiar,
+            mac_miidr,
+            mac_cr,
+            mac_ffr,
+            mac_fcr,
+            dma_omr,
+            dma_bmr,
+            dma_ier,
+            dma_sr,
             rx_ring: RxRing::new(rx_buffer),
             tx_ring: TxRing::new(tx_buffer),
         };
@@ -94,70 +114,70 @@ impl<'rx, 'tx> Eth<'rx, 'tx> {
 
         // set clock range in MAC MII address register
         let clock_range = ETH_MACMIIAR_CR_HCLK_DIV_16;
-        self.eth_mac.macmiiar.modify(|_, w| unsafe { w.cr().bits(clock_range) });
+        self.mac_miiar.modify(|r| r.write_cr(clock_range));
 
         self.get_phy()
             .reset()
             .set_autoneg();
 
         // Configuration Register
-        self.eth_mac.maccr.modify(|_, w| {
+        self.mac_cr.modify(|r| {
             // CRC stripping for Type frames
-            w.cstf().set_bit()
+            r.set_cstf()
                 // Fast Ethernet speed
-                .fes().set_bit()
+                .set_fes()
                 // Duplex mode
-                .dm().set_bit()
+                .set_dm()
                 // Automatic pad/CRC stripping
-                .apcs().set_bit()
+                .set_apcs()
                 // Retry disable in half-duplex mode
-                .rd().set_bit()
+                .set_rd()
                 // Receiver enable
-                .re().set_bit()
+                .set_re()
                 // Transmitter enable
-                .te().set_bit()
+                .set_te()
         });
         // frame filter register
-        self.eth_mac.macffr.modify(|_, w| {
+        self.mac_ffr.modify(|r| {
             // Receive All
-            w.ra().set_bit()
+            r.set_ra()
                 // Promiscuous mode
-                .pm().set_bit()
+                .set_pm()
         });
         // Flow Control Register
-        self.eth_mac.macfcr.modify(|_, w| {
+        self.mac_fcr.modify(|r| {
             // Pause time
-            w.pt().bits(0x100)
+            r.write_pt(0x100)
         });
         // operation mode register
-        self.eth_dma.dmaomr.modify(|_, w| {
+        self.dma_omr.modify(|r| {
             // Dropping of TCP/IP checksum error frames disable
-            w.dtcefd().set_bit()
+            r.set_dtcefd()
                 // Receive store and forward
-                .rsf().set_bit()
+                .set_rsf()
                 // Disable flushing of received frames
-                .dfrf().set_bit()
+                .set_dfrf()
                 // Transmit store and forward
-                .tsf().set_bit()
+                .set_tsf()
                 // Forward error frames
-                .fef().set_bit()
+                .set_fef()
                 // Operate on second frame
-                .osf().set_bit()
+                .set_osf()
         });
         // bus mode register
-        self.eth_dma.dmabmr.modify(|_, w| unsafe {
+        self.dma_bmr.modify(|r| {
             // Address-aligned beats
-            w.aab().set_bit()
+            r.set_aab()
                 // Fixed burst
-                .fb().set_bit()
+                .set_fb()
                 // Rx DMA PBL
-                .rdp().bits(32)
+                .write_rdp(32)
                 // Programmable burst length
-                .pbl().bits(32)
+                .write_pbl(32)
                 // Rx Tx priority ratio 2:1
-                .pm().bits(0b01)
+                .write_pm(0b01)
                 // Use separate PBL
-                .usp().set_bit()
+                .set_usp()
         });
 
         self
@@ -165,10 +185,10 @@ impl<'rx, 'tx> Eth<'rx, 'tx> {
 
     /// reset DMA bus mode register
     fn reset_dma_and_wait(&self) {
-        self.eth_dma.dmabmr.modify(|_, w| w.sr().set_bit());
+        self.dma_bmr.modify(|r| r.set_sr());
 
         // Wait until done
-        while self.eth_dma.dmabmr.read().sr().bit_is_set() {}
+        while self.dma_bmr.read_sr() {}
     }
 
     /// Enable RX and TX interrupts
@@ -178,14 +198,13 @@ impl<'rx, 'tx> Eth<'rx, 'tx> {
     /// clear interrupt pending bits. Otherwise the interrupt will
     /// reoccur immediately.
     pub fn enable_interrupt(&self, nvic: &mut NVIC) {
-        self.eth_dma.dmaier.modify(|_, w|
-            w
+        self.dma_ier.modify(|r|
                 // Normal interrupt summary enable
-                .nise().set_bit()
-                // Receive Interrupt Enable
-                .rie().set_bit()
-                // Transmit Interrupt Enable
-                .tie().set_bit()
+                r.set_nise()
+                    // Receive Interrupt Enable
+                    .set_rie()
+                    // Transmit Interrupt Enable
+                    .set_tie()
         );
 
         // Enable ethernet interrupts
@@ -200,8 +219,8 @@ impl<'rx, 'tx> Eth<'rx, 'tx> {
     }
 
     /// Construct a PHY driver
-    pub fn get_phy<'a>(&'a self) -> Phy<'a> {
-        Phy::new(&self.eth_mac.macmiiar, &self.eth_mac.macmiidr, PHY_ADDR)
+    pub fn get_phy(&self) -> Phy {
+        Phy::new(self.mac_miiar, self.mac_miidr, PHY_ADDR)
     }
 
     /// Obtain PHY status
@@ -245,11 +264,10 @@ impl<'rx, 'tx> Eth<'rx, 'tx> {
 /// * By unsafely getting `Peripherals`.
 ///
 /// TODO: could return interrupt reason
-pub fn eth_interrupt_handler(eth_dma: &ETHERNET_DMA) {
-    eth_dma.dmasr.write(|w|
-        w
-        .nis().set_bit()
-        .rs().set_bit()
-        .ts().set_bit()
+pub fn eth_interrupt_handler(dma_sr: reg::ethernet_dma::Dmasr<Srt>) {
+    dma_sr.write(|r|
+        r.set_nis()
+            .set_rs()
+            .set_ts()
     );
 }
