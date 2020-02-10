@@ -1,9 +1,13 @@
 use core::ops::{Deref, DerefMut};
 use core::default::Default;
-use stm32f4xx_hal::stm32::ETHERNET_DMA;
+
+use drone_cortex_m::{reg::prelude::*};
+
+use drone_stm32_map::{
+    reg,
+};
 
 use crate::{
-    desc::Descriptor,
     ring::{RingEntry, RingDescriptor},
 };
 
@@ -186,7 +190,11 @@ impl<'a> RxRing<'a> {
     }
 
     /// Setup the DMA engine (**required**)
-    pub fn start(&mut self, eth_dma: &ETHERNET_DMA) {
+    pub fn start(
+        &mut self,
+        dma_rpdr: &mut reg::ethernet_dma::Dmarpdr<Srt>,
+        dma_rdlar: reg::ethernet_dma::Dmardlar<Srt>,
+        dma_omr: &mut reg::ethernet_dma::Dmaomr<Srt>) {
         // Setup ring
         {
             let mut previous: Option<&mut RxRingEntry> = None;
@@ -199,25 +207,25 @@ impl<'a> RxRing<'a> {
         self.next_entry = 0;
         let ring_ptr = self.entries[0].desc() as *const RxDescriptor;
         // Register RxDescriptor
-        eth_dma.dmardlar.write(|w| {
-            w.srl().bits(ring_ptr as u32)
+        dma_rdlar.modify(|r| {
+            r.write_srl(ring_ptr as u32)
         });
 
         // Start receive
-        eth_dma.dmaomr.modify(|_, w| w.sr().set_bit());
+        dma_omr.modify(|r| r.set_sr());
 
-        self.demand_poll(eth_dma);
+        self.demand_poll(&mut dma_rpdr);
     }
 
     /// Demand that the DMA engine polls the current `RxDescriptor`
     /// (when in `RunningState::Stopped`.)
-    pub fn demand_poll(&self, eth_dma: &ETHERNET_DMA) {
-        eth_dma.dmarpdr.write(|w| unsafe { w.rpd().bits(1) });
+    pub fn demand_poll(&self, dma_rpdr: &mut reg::ethernet_dma::Dmarpdr<Srt>) {
+        dma_rpdr.modify(|r| { r.write_rpd(1) });
     }
 
     /// Get current `RunningState`
-    pub fn running_state(&self, eth_dma: &ETHERNET_DMA) -> RunningState {
-        match eth_dma.dmasr.read().rps().bits() {
+    pub fn running_state(&self, dma_sr: &mut reg::ethernet_dma::Dmasr<Srt>) -> RunningState {
+        match dma_sr.read_rps() {
             //  Reset or Stop Receive Command issued
             0b000 => RunningState::Stopped,
             //  Fetching receive transfer descriptor
@@ -236,10 +244,13 @@ impl<'a> RxRing<'a> {
 
     /// Receive the next packet (if any is ready), or return `None`
     /// immediately.
-    pub fn recv_next(&mut self, eth_dma: &ETHERNET_DMA) -> Result<RxPacket, RxError>
+    pub fn recv_next(
+        &mut self,
+        dma_rpdr: &mut reg::ethernet_dma::Dmarpdr<Srt>,
+        dma_sr: &mut reg::ethernet_dma::Dmasr<Srt>) -> Result<RxPacket, RxError>
     {
-        if ! self.running_state(eth_dma).is_running() {
-            self.demand_poll(eth_dma);
+        if ! self.running_state(dma_sr).is_running() {
+            self.demand_poll(&mut dma_rpdr);
         }
 
         let entries_len = self.entries.len();

@@ -57,6 +57,8 @@ pub struct Eth<'rx, 'tx> {
     dma_bmr: reg::ethernet_dma::Dmabmr<Srt>,
     dma_ier: reg::ethernet_dma::Dmaier<Srt>,
     dma_sr: reg::ethernet_dma::Dmasr<Srt>,
+    dma_tpdr: reg::ethernet_dma::Dmatpdr<Srt>,
+    dma_rpdr: reg::ethernet_dma::Dmarpdr<Srt>,
 
     rx_ring: RxRing<'rx>,
     tx_ring: TxRing<'tx>,
@@ -86,6 +88,10 @@ impl<'rx, 'tx> Eth<'rx, 'tx> {
         dma_bmr: reg::ethernet_dma::Dmabmr<Srt>,
         dma_ier: reg::ethernet_dma::Dmaier<Srt>,
         dma_sr: reg::ethernet_dma::Dmasr<Srt>,
+        dma_rpdr: reg::ethernet_dma::Dmarpdr<Srt>,
+        dma_tpdr: reg::ethernet_dma::Dmatpdr<Srt>,
+        dma_rdlar: reg::ethernet_dma::Dmardlar<Srt>,
+        dma_tdlar: reg::ethernet_dma::Dmatdlar<Srt>,
 
         rx_buffer: &'rx mut [RxRingEntry], 
         tx_buffer: &'tx mut [TxRingEntry]
@@ -100,12 +106,14 @@ impl<'rx, 'tx> Eth<'rx, 'tx> {
             dma_bmr,
             dma_ier,
             dma_sr,
+            dma_rpdr,
+            dma_tpdr,
             rx_ring: RxRing::new(rx_buffer),
             tx_ring: TxRing::new(tx_buffer),
         };
         eth.init();
-        eth.rx_ring.start(&eth.eth_dma);
-        eth.tx_ring.start(&eth.eth_dma);
+        eth.rx_ring.start(&mut dma_rpdr, dma_rdlar, &mut dma_omr);
+        eth.tx_ring.start(dma_tdlar, &mut dma_omr);
         eth
     }
 
@@ -114,7 +122,7 @@ impl<'rx, 'tx> Eth<'rx, 'tx> {
 
         // set clock range in MAC MII address register
         let clock_range = ETH_MACMIIAR_CR_HCLK_DIV_16;
-        self.mac_miiar.modify(|r| r.write_cr(clock_range));
+        self.mac_miiar.modify(|r| r.write_cr(clock_range.into()));
 
         self.get_phy()
             .reset()
@@ -233,24 +241,24 @@ impl<'rx, 'tx> Eth<'rx, 'tx> {
     /// It stops if the ring is full. Call `recv_next()` to free an
     /// entry and to demand poll from the hardware.
     pub fn rx_is_running(&self) -> bool {
-        self.rx_ring.running_state(&self.eth_dma).is_running()
+        self.rx_ring.running_state(&mut self.dma_sr).is_running()
     }
 
     /// Receive the next packet (if any is ready), or return `None`
     /// immediately.
     pub fn recv_next(&mut self) -> Result<RxPacket, RxError> {
-        self.rx_ring.recv_next(&self.eth_dma)
+        self.rx_ring.recv_next(&mut self.dma_rpdr, &mut self.dma_sr)
     }
 
     /// Is Tx DMA currently running?
     pub fn tx_is_running(&self) -> bool {
-        self.tx_ring.is_running(&self.eth_dma)
+        self.tx_ring.is_running(self.dma_sr)
     }
 
     /// Send a packet
     pub fn send<F: FnOnce(&mut [u8]) -> R, R>(&mut self, length: usize, f: F) -> Result<R, TxError> {
         let result = self.tx_ring.send(length, f);
-        self.tx_ring.demand_poll(&self.eth_dma);
+        self.tx_ring.demand_poll(self.dma_tpdr);
         result
     }
 }
@@ -265,7 +273,7 @@ impl<'rx, 'tx> Eth<'rx, 'tx> {
 ///
 /// TODO: could return interrupt reason
 pub fn eth_interrupt_handler(dma_sr: reg::ethernet_dma::Dmasr<Srt>) {
-    dma_sr.write(|r|
+    dma_sr.modify(|r|
         r.set_nis()
             .set_rs()
             .set_ts()

@@ -1,8 +1,12 @@
 use core::ops::{Deref, DerefMut};
-use stm32f4xx_hal::stm32::ETHERNET_DMA;
+
+use drone_cortex_m::{reg::prelude::*};
+
+use drone_stm32_map::{
+    reg,
+};
 
 use crate::{
-    desc::Descriptor,
     ring::{RingEntry, RingDescriptor},
 };
 
@@ -162,7 +166,10 @@ impl<'a> TxRing<'a> {
     }
 
     /// Start the Tx DMA engine
-    pub fn start(&mut self, eth_dma: &ETHERNET_DMA) {
+    pub fn start(
+        &mut self, 
+        dma_tdlar: reg::ethernet_dma::Dmatdlar<Srt>,
+        dma_omr: &mut reg::ethernet_dma::Dmaomr<Srt>) {
         // Setup ring
         {
             let mut previous: Option<&mut TxRingEntry> = None;
@@ -175,12 +182,12 @@ impl<'a> TxRing<'a> {
         
         let ring_ptr = self.entries[0].desc() as *const TxDescriptor;
         // Register TxDescriptor
-        eth_dma.dmatdlar.write(|w| {
-            w.stl().bits(ring_ptr as u32)
+        dma_tdlar.modify(|r| {
+            r.write_stl(ring_ptr.into())
         });
 
         // Start transmission
-        eth_dma.dmaomr.modify(|_, w| w.st().set_bit());
+        dma_omr.modify(|r| r.set_st());
     }
 
     pub fn send<F: FnOnce(&mut [u8]) -> R, R>(&mut self, length: usize, f: F) -> Result<R, TxError> {
@@ -204,17 +211,17 @@ impl<'a> TxRing<'a> {
 
     /// Demand that the DMA engine polls the current `TxDescriptor`
     /// (when we just transferred ownership to the hardware).
-    pub fn demand_poll(&self, eth_dma: &ETHERNET_DMA) {
-        eth_dma.dmatpdr.write(|w| unsafe { w.tpd().bits(1) });
+    pub fn demand_poll(&self, dma_tpdr: reg::ethernet_dma::Dmatpdr<Srt>) {
+        dma_tpdr.modify(|r| { r.write_tpd(1) });
     }
 
     /// Is the Tx DMA engine running?
-    pub fn is_running(&self, eth_dma: &ETHERNET_DMA) -> bool {
-        self.running_state(&eth_dma).is_running()
+    pub fn is_running(&self, dma_sr: reg::ethernet_dma::Dmasr<Srt>) -> bool {
+        self.running_state(dma_sr).is_running()
     }
 
-    fn running_state(&self, eth_dma: &ETHERNET_DMA) -> RunningState {
-        match eth_dma.dmasr.read().tps().bits() {
+    fn running_state(&self, dma_sr: reg::ethernet_dma::Dmasr<Srt>) -> RunningState {
+        match dma_sr.read_tps() {
             // Reset or Stop Transmit Command issued
             0b000 => RunningState::Stopped,
             // Fetching transmit transfer descriptor
