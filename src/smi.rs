@@ -47,7 +47,7 @@ impl SMI {
     }
 
     fn write_data(&self, data: u16) {
-        self.mac_miidr.write(|r| {
+        self.mac_miidr.modify(|r| {
             r.write_md(data.into())
         });
     }
