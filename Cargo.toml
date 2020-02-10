@@ -6,12 +6,13 @@ license = "Apache-2.0"
 authors = ["Astro <astro@spaceboyz.net>"]
 version = "0.1.2"
 keywords = ["ethernet", "eth", "stm32", "stm32f4"]
+edition = "2018"
 
 [dependencies]
 core = { path = "../drone-os/libcore-drone", package = "libcore-drone" }
 drone-core = { path = "../drone-os/drone-core" }
 drone-cortex-m = { path = "../drone-os/drone-cortex-m", features = ["fpu"] }
-drone-stm32-map = { path = "../drone-os/drone-stm32-map", features = ["dma", "exti", "gpio", "i2c", "rtc", "spi", "tim", "uart"] }
+drone-stm32-map = { path = "../drone-os/drone-stm32-map", features = ["dma", "gpio"] }
 futures = { version = "0.3.1", default-features = false}
 
 smoltcp = { path = "../smoltcp", default-features = false, features = [
