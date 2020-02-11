@@ -183,7 +183,7 @@ impl<'rx, 'tx> Eth<'rx, 'tx> {
                 // Programmable burst length
                 .write_pbl(32)
                 // Rx Tx priority ratio 2:1
-                .write_pm(0b01)
+                .write_rtpr(0b01)
                 // Use separate PBL
                 .set_usp()
         });
@@ -196,7 +196,7 @@ impl<'rx, 'tx> Eth<'rx, 'tx> {
         self.dma_bmr.modify(|r| r.set_sr());
 
         // Wait until done
-        while self.dma_bmr.read_sr() {}
+        while self.dma_bmr.sr.read_bit() {}
     }
 
     /// Enable RX and TX interrupts

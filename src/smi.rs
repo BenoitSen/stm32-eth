@@ -24,11 +24,11 @@ impl SMI {
 
     /// Wait for not busy
     fn wait_ready(&self) {
-        while self.mac_miiar.read().mb().bit_is_set() {}
+        while self.mac_miiar.mb.read_bit() {}
     }
 
     fn read_data(&self) -> u16 {
-        self.mac_miidr.read().md().bits()
+        self.mac_miidr.td.read_bits() as u16
     }
 
     /// Read an SMI register
@@ -48,7 +48,7 @@ impl SMI {
 
     fn write_data(&self, data: u16) {
         self.mac_miidr.modify(|r| {
-            r.write_md(data.into())
+            r.write_td(data.into())
         });
     }
 

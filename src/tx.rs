@@ -221,7 +221,7 @@ impl<'a> TxRing<'a> {
     }
 
     fn running_state(&self, dma_sr: reg::ethernet_dma::Dmasr<Srt>) -> RunningState {
-        match dma_sr.read_tps() {
+        match dma_sr.tps.read_bits() {
             // Reset or Stop Transmit Command issued
             0b000 => RunningState::Stopped,
             // Fetching transmit transfer descriptor

@@ -225,7 +225,7 @@ impl<'a> RxRing<'a> {
 
     /// Get current `RunningState`
     pub fn running_state(&self, dma_sr: &mut reg::ethernet_dma::Dmasr<Srt>) -> RunningState {
-        match dma_sr.read_rps() {
+        match dma_sr.rps.read_bits() {
             //  Reset or Stop Receive Command issued
             0b000 => RunningState::Stopped,
             //  Fetching receive transfer descriptor
