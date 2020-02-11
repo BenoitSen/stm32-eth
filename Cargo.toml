@@ -15,6 +15,8 @@ drone-cortex-m = { path = "../drone-os/drone-cortex-m", features = ["fpu"] }
 drone-stm32-map = { path = "../drone-os/drone-stm32-map", features = ["dma", "gpio"] }
 futures = { version = "0.3.1", default-features = false}
 
+aligned = "0.3"
+volatile-register = "0.2"
 smoltcp = { path = "../smoltcp", default-features = false, features = [
     "socket-raw", "socket-udp", "socket-tcp", "proto-ipv4", "ethernet"] }
 

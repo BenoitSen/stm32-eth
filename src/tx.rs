@@ -7,6 +7,7 @@ use drone_stm32_map::{
 };
 
 use crate::{
+    desc::Descriptor,
     ring::{RingEntry, RingDescriptor},
 };
 

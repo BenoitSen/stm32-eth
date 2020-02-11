@@ -4,6 +4,7 @@ use phy::{Phy, PhyStatus};
 mod smi;
 mod ring;
 pub use ring::RingEntry;
+mod desc;
 mod rx;
 use rx::{RxRing, RxRingEntry, RxPacket};
 pub use rx::{RxDescriptor, RxError};
