@@ -212,16 +212,16 @@ impl<'a> TxRing<'a> {
 
     /// Demand that the DMA engine polls the current `TxDescriptor`
     /// (when we just transferred ownership to the hardware).
-    pub fn demand_poll(&self, dma_tpdr: reg::ethernet_dma::Dmatpdr<Srt>) {
+    pub fn demand_poll(&self, dma_tpdr: &mut reg::ethernet_dma::Dmatpdr<Srt>) {
         dma_tpdr.modify(|r| { r.write_tpd(1) });
     }
 
     /// Is the Tx DMA engine running?
-    pub fn is_running(&self, dma_sr: reg::ethernet_dma::Dmasr<Srt>) -> bool {
+    pub fn is_running(&self, dma_sr: &reg::ethernet_dma::Dmasr<Srt>) -> bool {
         self.running_state(dma_sr).is_running()
     }
 
-    fn running_state(&self, dma_sr: reg::ethernet_dma::Dmasr<Srt>) -> RunningState {
+    fn running_state(&self, dma_sr: &reg::ethernet_dma::Dmasr<Srt>) -> RunningState {
         match dma_sr.tps.read_bits() {
             // Reset or Stop Transmit Command issued
             0b000 => RunningState::Stopped,

@@ -5,16 +5,16 @@ use drone_stm32_map::{
 };
 
 /// Station Management Interface
-pub struct SMI {
-    mac_miiar: reg::ethernet_mac::Macmiiar<Srt>,
-    mac_miidr: reg::ethernet_mac::Macmiidr<Srt>,
+pub struct SMI<'a> {
+    mac_miiar: &'a mut reg::ethernet_mac::Macmiiar<Srt>,
+    mac_miidr: &'a mut reg::ethernet_mac::Macmiidr<Srt>,
 }
 
-impl SMI {
+impl<'a> SMI<'a> {
     /// Allocate
     pub fn new(
-        mac_miiar: reg::ethernet_mac::Macmiiar<Srt>,
-        mac_miidr: reg::ethernet_mac::Macmiidr<Srt>) -> Self {
+        mac_miiar: &'a mut reg::ethernet_mac::Macmiiar<Srt>,
+        mac_miidr: &'a mut reg::ethernet_mac::Macmiidr<Srt>) -> Self {
 
         SMI {
             mac_miiar,

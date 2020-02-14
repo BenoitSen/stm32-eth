@@ -215,7 +215,7 @@ impl<'a> RxRing<'a> {
         // Start receive
         dma_omr.modify(|r| r.set_sr());
 
-        self.demand_poll(&mut dma_rpdr);
+        self.demand_poll(dma_rpdr);
     }
 
     /// Demand that the DMA engine polls the current `RxDescriptor`
@@ -251,7 +251,7 @@ impl<'a> RxRing<'a> {
         dma_sr: &mut reg::ethernet_dma::Dmasr<Srt>) -> Result<RxPacket, RxError>
     {
         if ! self.running_state(dma_sr).is_running() {
-            self.demand_poll(&mut dma_rpdr);
+            self.demand_poll(dma_rpdr);
         }
 
         let entries_len = self.entries.len();

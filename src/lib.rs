@@ -113,8 +113,8 @@ impl<'rx, 'tx> Eth<'rx, 'tx> {
             tx_ring: TxRing::new(tx_buffer),
         };
         eth.init();
-        eth.rx_ring.start(&mut dma_rpdr, dma_rdlar, &mut dma_omr);
-        eth.tx_ring.start(dma_tdlar, &mut dma_omr);
+        eth.rx_ring.start(&mut eth.dma_rpdr, dma_rdlar, &mut eth.dma_omr);
+        eth.tx_ring.start(dma_tdlar, &mut eth.dma_omr);
         eth
     }
 
@@ -218,17 +218,17 @@ impl<'rx, 'tx> Eth<'rx, 'tx> {
     }
 
     /// Calls [`eth_interrupt_handler()`](fn.eth_interrupt_handler.html)
-    pub fn interrupt_handler(&self) {
+    pub fn interrupt_handler(&mut self) {
         eth_interrupt_handler(&mut self.dma_sr);
     }
 
     /// Construct a PHY driver
-    pub fn get_phy(&self) -> Phy {
-        Phy::new(self.mac_miiar, self.mac_miidr, PHY_ADDR)
+    pub fn get_phy(&mut self) -> Phy {
+        Phy::new(&mut self.mac_miiar, &mut self.mac_miidr, PHY_ADDR)
     }
 
     /// Obtain PHY status
-    pub fn status(&self) -> PhyStatus {
+    pub fn status(&mut self) -> PhyStatus {
         self.get_phy().status()
     }
 
@@ -236,7 +236,7 @@ impl<'rx, 'tx> Eth<'rx, 'tx> {
     ///
     /// It stops if the ring is full. Call `recv_next()` to free an
     /// entry and to demand poll from the hardware.
-    pub fn rx_is_running(&self) -> bool {
+    pub fn rx_is_running(&mut self) -> bool {
         self.rx_ring.running_state(&mut self.dma_sr).is_running()
     }
 
@@ -248,13 +248,13 @@ impl<'rx, 'tx> Eth<'rx, 'tx> {
 
     /// Is Tx DMA currently running?
     pub fn tx_is_running(&self) -> bool {
-        self.tx_ring.is_running(self.dma_sr)
+        self.tx_ring.is_running(&self.dma_sr)
     }
 
     /// Send a packet
     pub fn send<F: FnOnce(&mut [u8]) -> R, R>(&mut self, length: usize, f: F) -> Result<R, TxError> {
         let result = self.tx_ring.send(length, f);
-        self.tx_ring.demand_poll(self.dma_tpdr);
+        self.tx_ring.demand_poll(&mut self.dma_tpdr);
         result
     }
 }
