@@ -184,7 +184,7 @@ impl<'a> TxRing<'a> {
         let ring_ptr = self.entries[0].desc() as *const TxDescriptor;
         // Register TxDescriptor
         dma_tdlar.modify(|r| {
-            r.write_stl(ring_ptr.into())
+            r.write_stl(ring_ptr as u32)
         });
 
         // Start transmission

@@ -206,7 +206,7 @@ impl<'rx, 'tx> Eth<'rx, 'tx> {
     /// [`eth_interrupt_handler()`](fn.eth_interrupt_handler.html) to
     /// clear interrupt pending bits. Otherwise the interrupt will
     /// reoccur immediately.
-    pub fn enable_interrupt(&self, nvic: &mut NVIC) {
+    pub fn enable_interrupt(&self) {
         self.dma_ier.modify(|r|
                 // Normal interrupt summary enable
                 r.set_nise()
@@ -215,16 +215,11 @@ impl<'rx, 'tx> Eth<'rx, 'tx> {
                     // Transmit Interrupt Enable
                     .set_tie()
         );
-
-        // Enable ethernet interrupts
-        let interrupt = Interrupt::ETH;
-
-        nvic.enable(interrupt);
     }
 
     /// Calls [`eth_interrupt_handler()`](fn.eth_interrupt_handler.html)
     pub fn interrupt_handler(&self) {
-        eth_interrupt_handler(&self.eth_dma);
+        eth_interrupt_handler(&mut self.dma_sr);
     }
 
     /// Construct a PHY driver
@@ -273,7 +268,7 @@ impl<'rx, 'tx> Eth<'rx, 'tx> {
 /// * By unsafely getting `Peripherals`.
 ///
 /// TODO: could return interrupt reason
-pub fn eth_interrupt_handler(dma_sr: reg::ethernet_dma::Dmasr<Srt>) {
+pub fn eth_interrupt_handler(dma_sr: &mut reg::ethernet_dma::Dmasr<Srt>) {
     dma_sr.modify(|r|
         r.set_nis()
             .set_rs()
