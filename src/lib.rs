@@ -13,6 +13,7 @@ use tx::{TxRing, TxRingEntry};
 pub use tx::{TxDescriptor, TxError};
 mod setup;
 pub use setup::setup;
+pub use setup::setup_pins;
 
 use drone_cortex_m::{reg::prelude::*};
 
