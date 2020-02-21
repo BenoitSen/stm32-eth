@@ -1,9 +1,6 @@
 use drone_cortex_m::{reg::prelude::*};
 
 use drone_stm32_map::{
-    periph::{
-        gpio::{GpioPortPeriph, GpioA, GpioB, GpioC, GpioG},
-    },
     reg,
 };
 
@@ -12,10 +9,10 @@ use drone_stm32_map::{
 ///
 /// If supported, you should also call `setup_pins()`.
 pub fn setup(
-    rcc_apb2enr: reg::rcc::Apb2Enr<Srt>,
-    rcc_ahb1enr: reg::rcc::Ahb1Enr<Srt>,
-    rcc_ahb1rstr: reg::rcc::Ahb1Rstr<Srt>, 
-    syscfg_pmc: reg::syscfg::Pmc<Srt>,
+    rcc_apb2enr: &mut reg::rcc::Apb2Enr<Srt>,
+    rcc_ahb1enr: &mut reg::rcc::Ahb1Enr<Srt>,
+    rcc_ahb1rstr: &mut reg::rcc::Ahb1Rstr<Srt>, 
+    syscfg_pmc: &mut reg::syscfg::Pmc<Srt>,
     ) {
     // enable syscfg clock
     rcc_apb2enr.modify(|r| r.set_syscfgen());
@@ -35,7 +32,7 @@ pub fn setup(
 }
 
 fn reset_pulse(
-    rcc_ahb1rstr: reg::rcc::Ahb1Rstr<Srt>,
+    rcc_ahb1rstr: &mut reg::rcc::Ahb1Rstr<Srt>,
     ) {
     rcc_ahb1rstr.modify(|r| r.set_ethmacrst());
     rcc_ahb1rstr.modify(|r| r.clear_ethmacrst());
@@ -47,25 +44,46 @@ fn reset_pulse(
 /// * Alternate function 11
 /// * High-speed
 pub fn setup_pins(
-    gpio_a: &mut GpioPortPeriph<GpioA>,
-    gpio_b: &mut GpioPortPeriph<GpioB>,
-    gpio_c: &mut GpioPortPeriph<GpioC>,
-    gpio_g: &mut GpioPortPeriph<GpioG>
+    rcc_ahb1enr: &mut reg::rcc::Ahb1Enr<Srt>,
+
+    gpioa_ospeedr: &mut reg::gpioa::Ospeedr<Srt>,
+    gpioa_moder: &mut reg::gpioa::Moder<Srt>,
+    gpioa_afrl: &mut reg::gpioa::Afrl<Srt>,
+
+    gpiob_ospeedr: &mut reg::gpiob::Ospeedr<Srt>,
+    gpiob_moder: &mut reg::gpiob::Moder<Srt>,
+    gpiob_afrh: &mut reg::gpiob::Afrh<Srt>,
+
+    gpioc_ospeedr: &mut reg::gpioc::Ospeedr<Srt>,
+    gpioc_moder: &mut reg::gpioc::Moder<Srt>,
+    gpioc_afrl: &mut reg::gpioc::Afrl<Srt>,
+
+    gpiog_ospeedr: &mut reg::gpiog::Ospeedr<Srt>,
+    gpiog_moder: &mut reg::gpiog::Moder<Srt>,
+    gpiog_afrh: &mut reg::gpiog::Afrh<Srt>,
 ) {
+
+    rcc_ahb1enr.modify(|r| {
+        r.set_gpioaen()
+            .set_gpioben()
+            .set_gpiocen()
+            .set_gpiogen()
+    });
+
     // GPIOA 1 - 2 - 7
     // speed to Very high
     // AF 11
-    gpio_a.gpio_ospeedr.modify(|r| {
+    gpioa_ospeedr.modify(|r| {
         r.write_ospeedr1(0b11)
             .write_ospeedr2(0b11)
             .write_ospeedr7(0b11)
     });
-    gpio_a.gpio_moder.modify(|r| {
+    gpioa_moder.modify(|r| {
         r.write_moder1(0b10)
             .write_moder2(0b10)
             .write_moder7(0b10)
     });  
-    gpio_a.gpio_afrl.modify(|r| {
+    gpioa_afrl.modify(|r| {
         r.write_afrl1(11)
             .write_afrl2(11)
             .write_afrl7(11)
@@ -74,30 +92,30 @@ pub fn setup_pins(
     // GPIOB 13
     // speed to Very high
     // AF 11
-    gpio_b.gpio_ospeedr.modify(|r| {
+    gpiob_ospeedr.modify(|r| {
         r.write_ospeedr13(0b11)
     });
-    gpio_b.gpio_moder.modify(|r| {
+    gpiob_moder.modify(|r| {
         r.write_moder13(0b10)
     });  
-    gpio_b.gpio_afrh.modify(|r| {
+    gpiob_afrh.modify(|r| {
         r.write_afrh13(11)
     });
 
     // GPIOC 1 - 4 - 5
     // speed to Very high
     // AF 11
-    gpio_c.gpio_ospeedr.modify(|r| {
+    gpioc_ospeedr.modify(|r| {
         r.write_ospeedr1(0b11)
             .write_ospeedr4(0b11)
             .write_ospeedr5(0b11)
     });
-    gpio_c.gpio_moder.modify(|r| {
+    gpioc_moder.modify(|r| {
         r.write_moder1(0b10)
             .write_moder4(0b10)
             .write_moder5(0b10)
     });  
-    gpio_c.gpio_afrl.modify(|r| {
+    gpioc_afrl.modify(|r| {
         r.write_afrl1(11)
             .write_afrl4(11)
             .write_afrl5(11)
@@ -106,15 +124,15 @@ pub fn setup_pins(
     // GPIOG 11 - 13
     // speed to Very high
     // AF 11
-    gpio_g.gpio_ospeedr.modify(|r| {
+    gpiog_ospeedr.modify(|r| {
         r.write_ospeedr11(0b11)
             .write_ospeedr13(0b11)
     });
-    gpio_g.gpio_moder.modify(|r| {
+    gpiog_moder.modify(|r| {
         r.write_moder11(0b10)
             .write_moder13(0b10)
     });  
-    gpio_g.gpio_afrh.modify(|r| {
+    gpiog_afrh.modify(|r| {
         r.write_afrh11(11)
             .write_afrh13(11)
     });
