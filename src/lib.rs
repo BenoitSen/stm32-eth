@@ -184,7 +184,7 @@ impl<'rx, 'tx> Eth<'rx, 'tx> {
                 // Forward error frames
                 .set_fef()
                 // Operate on second frame
-                .set_osf()
+                //.set_osf()
         });
         // bus mode register
         self.dma_bmr.modify(|r| {
