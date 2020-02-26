@@ -49,6 +49,8 @@ use self::consts::*;
 /// [`Phy`](phy/struct.Phy.html) like they're found on STM Nucleo-144
 /// boards.
 pub struct Eth<'rx, 'tx> {
+    hclk_in_mhz: u8,
+
     mac_miiar: reg::ethernet_mac::Macmiiar<Srt>,
     mac_miidr: reg::ethernet_mac::Macmiidr<Srt>,
     mac_cr: reg::ethernet_mac::Maccr<Srt>,
@@ -80,6 +82,8 @@ impl<'rx, 'tx> Eth<'rx, 'tx> {
     /// so that you can [`send()`](#method.send) and
     /// [`recv_next()`](#method.recv_next).
     pub fn new(
+        hclk_in_mhz: u8,
+
         mac_miiar: reg::ethernet_mac::Macmiiar<Srt>,
         mac_miidr: reg::ethernet_mac::Macmiidr<Srt>,
         mac_cr: reg::ethernet_mac::Maccr<Srt>,
@@ -99,6 +103,7 @@ impl<'rx, 'tx> Eth<'rx, 'tx> {
         tx_buffer: &'tx mut [TxRingEntry]
     ) -> Self {
         let mut eth = Eth {
+            hclk_in_mhz,
             mac_miiar,
             mac_miidr,
             mac_cr,
@@ -123,8 +128,15 @@ impl<'rx, 'tx> Eth<'rx, 'tx> {
         self.reset_dma_and_wait();
 
         // set clock range in MAC MII address register
-        let clock_range = ETH_MACMIIAR_CR_HCLK_DIV_16;
-        self.mac_miiar.modify(|r| r.write_cr(clock_range.into()));
+        self.mac_miiar.modify(|r| r.write_cr(
+            match self.hclk_in_mhz {
+                20..=34 => 0b010,
+                35..=59 => 0b011,
+                60..=99 => 0b000,
+                100..=149 => 0b001,
+                150..=180 => 0b100,
+                _ => panic!(),
+            }));
 
         self.get_phy()
             .reset()
