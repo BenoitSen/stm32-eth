@@ -62,6 +62,15 @@ pub fn setup_pins(
     gpiog_moder: &mut reg::gpiog::Moder<Srt>,
     gpiog_afrh: &mut reg::gpiog::Afrh<Srt>,
 ) {
+    // GPIOA 1 -> ETH_RMII_REF_CLK
+    // GPIOA 2 -> ETH_MDIO
+    // GPIOA 7 -> ETH_RMII_CRS_DV
+    // GPIOB 13 -> ETH _RMII_TXD1
+    // GPIOC 1 -> ETH_MDC
+    // GPIOC 4 -> ETH_RMII_RXD0
+    // GPIOC 5 -> ETH_RMII_RXD1
+    // GPIOG 11 -> ETH _RMII_TX_EN
+    // GPIOG 13 -> ETH _RMII_TXD0
 
     rcc_ahb1enr.modify(|r| {
         r.set_gpioaen()
