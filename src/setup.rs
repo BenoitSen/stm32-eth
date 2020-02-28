@@ -50,10 +50,6 @@ pub fn setup_pins(
     gpioa_moder: &mut reg::gpioa::Moder<Srt>,
     gpioa_afrl: &mut reg::gpioa::Afrl<Srt>,
 
-    gpiob_ospeedr: &mut reg::gpiob::Ospeedr<Srt>,
-    gpiob_moder: &mut reg::gpiob::Moder<Srt>,
-    gpiob_afrh: &mut reg::gpiob::Afrh<Srt>,
-
     gpioc_ospeedr: &mut reg::gpioc::Ospeedr<Srt>,
     gpioc_moder: &mut reg::gpioc::Moder<Srt>,
     gpioc_afrl: &mut reg::gpioc::Afrl<Srt>,
@@ -65,16 +61,15 @@ pub fn setup_pins(
     // GPIOA 1 -> ETH_RMII_REF_CLK
     // GPIOA 2 -> ETH_MDIO
     // GPIOA 7 -> ETH_RMII_CRS_DV
-    // GPIOB 13 -> ETH _RMII_TXD1
     // GPIOC 1 -> ETH_MDC
     // GPIOC 4 -> ETH_RMII_RXD0
     // GPIOC 5 -> ETH_RMII_RXD1
     // GPIOG 11 -> ETH _RMII_TX_EN
     // GPIOG 13 -> ETH _RMII_TXD0
+    // GPIOG 14 -> ETH _RMII_TXD1
 
     rcc_ahb1enr.modify(|r| {
         r.set_gpioaen()
-            .set_gpioben()
             .set_gpiocen()
             .set_gpiogen()
     });
@@ -98,19 +93,6 @@ pub fn setup_pins(
             .write_afrl7(11)
     });
 
-    // GPIOB 13
-    // speed to Very high
-    // AF 11
-    gpiob_ospeedr.modify(|r| {
-        r.write_ospeedr13(0b11)
-    });
-    gpiob_moder.modify(|r| {
-        r.write_moder13(0b10)
-    });  
-    gpiob_afrh.modify(|r| {
-        r.write_afrh13(11)
-    });
-
     // GPIOC 1 - 4 - 5
     // speed to Very high
     // AF 11
@@ -130,19 +112,22 @@ pub fn setup_pins(
             .write_afrl5(11)
     });
 
-    // GPIOG 11 - 13
+    // GPIOG 11 - 13 - 14
     // speed to Very high
     // AF 11
     gpiog_ospeedr.modify(|r| {
         r.write_ospeedr11(0b11)
             .write_ospeedr13(0b11)
+            .write_ospeedr14(0b11)
     });
     gpiog_moder.modify(|r| {
         r.write_moder11(0b10)
             .write_moder13(0b10)
+            .write_moder14(0b11)
     });  
     gpiog_afrh.modify(|r| {
         r.write_afrh11(11)
             .write_afrh13(11)
+            .write_afrh14(11)
     });
 }
