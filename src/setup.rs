@@ -123,7 +123,7 @@ pub fn setup_pins(
     gpiog_moder.modify(|r| {
         r.write_moder11(0b10)
             .write_moder13(0b10)
-            .write_moder14(0b11)
+            .write_moder14(0b10)
     });  
     gpiog_afrh.modify(|r| {
         r.write_afrh11(11)
