@@ -9,11 +9,10 @@ keywords = ["ethernet", "eth", "stm32", "stm32f4"]
 edition = "2018"
 
 [dependencies]
-core = { path = "../drone-os/libcore-drone", package = "libcore-drone" }
-drone-core = { path = "../drone-os/drone-core" }
-drone-cortex-m = { path = "../drone-os/drone-cortex-m", features = [] }
-drone-stm32-map = { path = "../drone-os/drone-stm32-map", features = ["dma", "gpio"] }
-futures = { version = "0.3.1", default-features = false}
+drone-core = { version = "0.12.0" }
+drone-cortexm = { version = "0.12.0", features = ["bit-band", "floating-point-unit", "memory-protection-unit"] }
+drone-stm32-map = { version = "0.12.0", features = ["uart", "gpio"] }
+futures = { version = "0.3.0", default-features = false }
 
 aligned = "0.3"
 volatile-register = "0.2"

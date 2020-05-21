@@ -1,7 +1,7 @@
 use core::ops::{Deref, DerefMut};
 use core::default::Default;
 
-use drone_cortex_m::{reg::prelude::*};
+use drone_cortexm::{reg::prelude::*};
 
 use drone_stm32_map::{
     reg,

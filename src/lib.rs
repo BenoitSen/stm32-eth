@@ -15,7 +15,7 @@ mod setup;
 pub use setup::setup;
 pub use setup::setup_pins;
 
-use drone_cortex_m::{reg::prelude::*};
+use drone_cortexm::{reg::prelude::*};
 
 use drone_stm32_map::{
     reg,
@@ -43,7 +43,6 @@ mod consts {
     /* For HCLK 150-168 MHz */
     pub const ETH_MACMIIAR_CR_HCLK_DIV_102: u8 = 4;
 }
-use self::consts::*;
 
 /// Ethernet driver for *STM32* chips with a *LAN8742*
 /// [`Phy`](phy/struct.Phy.html) like they're found on STM Nucleo-144
